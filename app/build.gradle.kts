@@ -23,7 +23,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -52,47 +52,53 @@ android {
 }
 
 dependencies {
-
+    // Core Android dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Jetpack Compose UI dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
 
-    // room
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
+    // Dependency Injection
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
+    ksp(libs.hilt.android.compiler)
+
+    // Database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)
     ksp(libs.androidx.room.compiler)
 
-    //retrofit
+    // Networking
     implementation(libs.retrofit2)
     implementation(libs.retrofit2.kotlinx.serialization.converter)
 
-    //paging
-    implementation(libs.androidx.paging.runtime)
-    implementation(libs.androidx.paging.compose)
-
-    //hilt
-    implementation(libs.hilt.android)
-    implementation(libs.androidx.hilt.navigation.compose)
-    ksp(libs.hilt.android.compiler)
-
-
-
-    // coil
+    // Image Loading
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.coil.svg)
 
+    // Paging
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
+
+    // Testing dependencies
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+
+    // Debug dependencies
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
 }

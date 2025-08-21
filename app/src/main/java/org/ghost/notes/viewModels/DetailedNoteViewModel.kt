@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 
 @HiltViewModel
-class NoteDetailedViewModel @Inject constructor(
+class DetailedNoteViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val notesRepository: NotesRepository
 ) : ViewModel() {
@@ -48,6 +48,7 @@ class NoteDetailedViewModel @Inject constructor(
                                 isPinned = noteWithTags.note.isPinned,
                                 themeId = noteWithTags.note.themeId,
                                 tags = noteWithTags.tags,
+                                date = noteWithTags.note.createdAt,
                                 // ...copy other fields...
                                 isLoading = false,
                                 isEditing = false // Start in view mode
@@ -71,7 +72,9 @@ class NoteDetailedViewModel @Inject constructor(
     // ... onTitleChange, onContentChange, etc. are the same ...
 
     fun saveNote() {
+        onEditModeChanged(false)
         viewModelScope.launch {
+
             val currentState = _uiState.value
 
             if (noteId != -1) {
@@ -112,6 +115,10 @@ class NoteDetailedViewModel @Inject constructor(
         }
     }
 
+    fun onEditModeChanged(newEditingMode: Boolean) {
+        updateState(uiState.value.copy(isEditing = newEditingMode))
+    }
+
     fun onTitleChange(newTitle: String) {
         updateState(uiState.value.copy(title = newTitle))
     }
@@ -144,7 +151,11 @@ class NoteDetailedViewModel @Inject constructor(
         updateState(uiState.value.copy(tags = newTags))
     }
 
-    private fun updateState(state: DetailedNoteUiState) {
-        _uiState.update { state }
+    private fun updateState(newState: DetailedNoteUiState) {
+
+        if (!newState.isEditing) {
+            newState.isEditing = true
+        }
+        _uiState.update { newState }
     }
 }

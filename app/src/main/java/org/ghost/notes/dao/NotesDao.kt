@@ -2,6 +2,7 @@ package org.ghost.notes.dao
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -82,6 +83,10 @@ interface NotesDao {
 
     @Query("DELETE FROM note_tags WHERE note_id = :noteId")
     suspend fun clearTagsForNote(noteId: Int)
+
+
+    @Delete
+    suspend fun deleteNote(note: Note)
 
 
 

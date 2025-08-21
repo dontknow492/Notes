@@ -7,6 +7,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import org.ghost.notes.entity.Note
 import org.ghost.notes.enums.SortBy
 import org.ghost.notes.enums.SortOrder
 import org.ghost.notes.repository.NotesRepository
@@ -17,12 +19,18 @@ import javax.inject.Inject
 @HiltViewModel
 class NotesListViewModel @Inject constructor(
     private val notesRepository: NotesRepository
-): ViewModel() {
+) : ViewModel() {
     private val _filter = MutableStateFlow(NotesFilter())
     val filter = _filter.asStateFlow()
 
     val notes = notesRepository.filterNotes().cachedIn(viewModelScope)
 
+
+    fun deleteNote(note: Note) {
+        viewModelScope.launch {
+            notesRepository.deleteNote(note)
+        }
+    }
 
     fun updateQuery(query: String?) {
         updateFilter(filter.value.copy(query = query))
@@ -41,7 +49,7 @@ class NotesListViewModel @Inject constructor(
     }
 
     private fun updateFilter(filter: NotesFilter) {
-        _filter.update{
+        _filter.update {
             filter
         }
     }

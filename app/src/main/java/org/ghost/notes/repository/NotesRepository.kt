@@ -70,5 +70,10 @@ class NotesRepository @Inject constructor(
         notesDao.updateNote(note)
     }
 
+    suspend fun deleteNote(note: Note) {
+        notesDao.deleteNote(note)
+    }
+
+
 
 }
