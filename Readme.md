@@ -40,7 +40,7 @@ To get this project up and running on your local machine for development and tes
 
 1. Clone the repository:  
    Open your terminal or Git client and clone this repository to your desired directory.  
-   git clone https://github.com/your-username/your-repository-name.git
+   git clone https://github.com/dontknow492/Notes.git
 
 2. Open in Android Studio:  
    Launch Android Studio (preferably the latest stable version, like Hedgehog or newer) and select "Open" to navigate to the cloned project directory.
