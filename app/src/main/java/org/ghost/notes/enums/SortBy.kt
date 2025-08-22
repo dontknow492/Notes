@@ -6,7 +6,7 @@ enum class SortBy(val value: String) {
     UPDATED_AT("updated_at"),
     CREATED_AT("created_at");
 
-    companion object{
+    companion object {
         fun fromValue(value: String): SortBy {
             return entries.first { it.value.equals(value, ignoreCase = true) }
         }

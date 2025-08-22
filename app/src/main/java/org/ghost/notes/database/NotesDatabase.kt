@@ -10,10 +10,10 @@ import org.ghost.notes.entity.NoteTags
 import org.ghost.notes.entity.Tag
 
 @Database(entities = [Note::class, Tag::class, NoteTags::class], version = 1)
-abstract class NotesDatabase: RoomDatabase() {
+abstract class NotesDatabase : RoomDatabase() {
     abstract fun notesDao(): NotesDao
 
-    companion object{
+    companion object {
         private var INSTANCE: NotesDatabase? = null
         fun getInstance(context: Context): NotesDatabase {
             return INSTANCE ?: synchronized(this) {

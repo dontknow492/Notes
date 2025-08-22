@@ -25,4 +25,4 @@ data class Note(
     val color: String?,
     val isPinned: Boolean = false,
     @ColumnInfo(name = "theme_id") val themeId: Int
-    )
+)
