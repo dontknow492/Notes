@@ -4,8 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.ghost.notes.entity.Note
@@ -23,7 +26,15 @@ class NotesListViewModel @Inject constructor(
     private val _filter = MutableStateFlow(NotesFilter())
     val filter = _filter.asStateFlow()
 
-    val notes = notesRepository.filterNotes().cachedIn(viewModelScope)
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    val notes = filter.flatMapLatest { filter ->
+        notesRepository.filterNotes(
+            query = filter.query,
+            tagId = filter.tagId,
+            sortOrder = filter.sortOrder,
+            sortBy = filter.sortBy
+        ).cachedIn(viewModelScope)
+    }
 
 
     fun deleteNote(note: Note) {
@@ -46,6 +57,10 @@ class NotesListViewModel @Inject constructor(
 
     fun updateSortBy(sortBy: SortBy) {
         updateFilter(filter.value.copy())
+    }
+
+    fun updateOrder(sortOrder: SortOrder, sortBy: SortBy) {
+        updateFilter(filter.value.copy(sortOrder = sortOrder, sortBy = sortBy))
     }
 
     private fun updateFilter(filter: NotesFilter) {

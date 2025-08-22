@@ -1,5 +1,6 @@
 package org.ghost.notes.repository
 
+import android.util.Log
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.room.Transaction
@@ -21,18 +22,20 @@ class NotesRepository @Inject constructor(
         sortBy: SortBy = SortBy.CREATED_AT
     ) = Pager(
         config = PagingConfig(pageSize = 20),
-        pagingSourceFactory = { notesDao.filterNotes(
-            query,
-            tagId,
-            sortOrder.value,
-            sortBy.value
-        ) }
+        pagingSourceFactory = {
+            notesDao.filterNotes(
+                query,
+                tagId,
+                sortOrder.value,
+                sortBy.value
+            )
+        }
     ).flow
 
     fun getDetailedNote(noteId: Int) = notesDao.getDetailedNote(noteId)
 
     @Transaction
-    suspend fun insertNoteWithTags(note: Note, tags: List<Tag>) {
+    suspend fun insertNoteWithTags(note: Note, tags: List<Tag>): Long {
         // Step 1: Insert the note and get its new ID
         val noteId = notesDao.insertNote(note)
 
@@ -45,24 +48,30 @@ class NotesRepository @Inject constructor(
             NoteTags(noteId = noteId.toInt(), tagId = tagId.toInt())
         }
         notesDao.insertNoteTags(noteTagRelations)
+        return noteId
     }
 
     @Transaction
     suspend fun updateNoteWithTags(note: Note, tags: List<Tag>) {
         // Step 1: Update the main Note object.
-        notesDao.updateNote(note)
+        val noteID = notesDao.updateNote(note)
 
         // Step 2: Clear all existing tag relationships for this note.
         notesDao.clearTagsForNote(note.id)
 
+
         // Step 3: Create the new relationships in the join table.
         // (Assuming the Tag entities themselves already exist or are handled separately)
         if (tags.isNotEmpty()) {
-            val noteTagRelations = tags.map { tag ->
-                NoteTags(noteId = note.id, tagId = tag.id)
+            val tagIds = notesDao.insertTags(tags)
+            Log.d("NotesRepository", "updateNoteWithTags: $noteID, $tagIds, $tags, $note")
+            val noteTagRelations = tagIds.map { tagId ->
+                NoteTags(noteId = 3, tagId = tagId.toInt())
             }
             notesDao.insertNoteTags(noteTagRelations)
+
         }
+
     }
 
 
@@ -73,7 +82,6 @@ class NotesRepository @Inject constructor(
     suspend fun deleteNote(note: Note) {
         notesDao.deleteNote(note)
     }
-
 
 
 }

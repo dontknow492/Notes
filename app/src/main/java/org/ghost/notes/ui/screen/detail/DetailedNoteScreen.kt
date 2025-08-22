@@ -1,11 +1,18 @@
-package org.ghost.notes.ui.screen
+package org.ghost.notes.ui.screen.detail
 
+import android.content.Intent
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,12 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,24 +31,31 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import org.ghost.notes.R
-import org.ghost.notes.entity.Tag
+import org.ghost.notes.helper.formatEpochMilliToString
+import org.ghost.notes.ui.screen.CreateTagDialog
+import org.ghost.notes.ui.screen.TagItem
 import org.ghost.notes.viewModels.DetailedNoteViewModel
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun DetailedNoteScreen(
@@ -55,10 +65,42 @@ fun DetailedNoteScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            if (uri != null) {
+                val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                viewModel.onImageChange(uri.toString())
+            } else {
+                viewModel.onImageChange(null)
+            }
+
+
+        }
+    )
+
+    var showTagDialog by remember { mutableStateOf(false) }
+
+    val onImageChange = {
+        galleryLauncher.launch("image/*")
+    }
+    val onRemoveImage = {
+        viewModel.onImageChange(null)
+    }
+    val addTag: (String) -> Unit = viewModel::addTag
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { DetailedScreenTopAppBar(onBack = onBack) },
+        topBar = {
+            DetailedScreenTopAppBar(
+                onBack = onBack,
+                onImageChange = onImageChange,
+                onAddNewTag = { showTagDialog = true }
+            )
+        },
         floatingActionButton = {
             when (state.isEditing) {
                 false -> FloatingActionButton(
@@ -85,92 +127,35 @@ fun DetailedNoteScreen(
         val modifier = Modifier.padding(innerPadding)
         DetailedNote(
             modifier = modifier,
-            heading = state.heading,
-            title = state.title,
-            body = state.body,
-            date = state.date, // Example date: March 15, 2023
-            image = state.image,
-            tags = state.tags,
-            onBodyChange = viewModel::onBodyChange,
-            onHeadingChange = viewModel::onHeadingChange,
-            onTitleChange = viewModel::onTitleChange,
+            viewModel = viewModel,
+            onImageChange = onImageChange,
+            onImageDelete = onRemoveImage,
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope
         )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DetailedScreenTopAppBar(
-    modifier: Modifier = Modifier,
-    onBack: () -> Unit = {}
-) {
-    TopAppBar(
-        title = {},
-        navigationIcon = {
-            IconButton(
-                onClick = onBack
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
-                )
-            }
-        },
-        actions = {
-            IconButton(
-                onClick = {}
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Face,
-                    contentDescription = "Theme"
-                )
-            }
-            IconButton(
-                onClick = {}
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AddCircle,
-                    contentDescription = "Add"
-                )
-            }
-            IconButton(
-                onClick = {}
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More"
-                )
-            }
-
-
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        modifier = modifier
-    )
+    if (showTagDialog) {
+        CreateTagDialog(
+            onDismiss = { showTagDialog = false },
+            onAccept = addTag
+        )
+    }
 }
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun DetailedNote(
     modifier: Modifier = Modifier,
-    heading: String? = null,
-    title: String? = null,
-    body: String? = null,
-    date: Long = System.currentTimeMillis(),
-    image: String? = null,
-    tags: List<Tag> = emptyList(),
-    onHeadingChange: (String) -> Unit = {},
-    onTitleChange: (String) -> Unit = {},
-    onBodyChange: (String) -> Unit = {},
+    viewModel: DetailedNoteViewModel,
+    onImageChange: () -> Unit = {},
+    onImageDelete: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-
+    val state by viewModel.uiState.collectAsState()
+    val noteId = state.originalNote?.id ?: -1
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -178,8 +163,8 @@ fun DetailedNote(
     ) {
         with(sharedTransitionScope) {
             TextField(
-                value = heading ?: "",
-                onValueChange = onHeadingChange,
+                value = state.heading,
+                onValueChange = viewModel::onHeadingChange,
                 placeholder = {
                     Text(
                         "Heading here...",
@@ -190,7 +175,7 @@ fun DetailedNote(
                 modifier = Modifier
                     .fillMaxWidth()
                     .sharedElement(
-                        rememberSharedContentState("heading"),
+                        rememberSharedContentState("heading/${noteId}"),
                         animatedVisibilityScope = animatedVisibilityScope
                     ),
                 colors = TextFieldDefaults.colors(
@@ -200,10 +185,18 @@ fun DetailedNote(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent
-                )
+                ),
+                isError = state.validationState.isHeadingEmpty || state.validationState.isHeadingTooLong
             )
             Text(
-                "10 October, 2023",
+                text = "Created: ${formatEpochMilliToString(state.createdAt)}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 18.dp)
+            )
+
+            Text(
+                text = "Last modified: ${formatEpochMilliToString(state.updatedAt)}",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 18.dp)
@@ -214,35 +207,63 @@ fun DetailedNote(
                 modifier = Modifier.padding(horizontal = 18.dp)
             ) {
                 items(
-                    items = tags,
+                    items = state.tags,
                     key = { it.id }
                 ) { item ->
                     TagItem(tag = item, onClick = {})
                 }
             }
 
-            image?.let {
-                AsyncImage(
-                    model = R.drawable.notes,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(18.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .fillMaxWidth()
-                        .sharedElement(
-                            rememberSharedContentState("image"),
-                            animatedVisibilityScope = animatedVisibilityScope
-                        ),
-                    contentScale = ContentScale.FillWidth
-                )
+            state.image?.let {
+                if (it.isEmpty()) return@let
+                // Display the image using AsyncImage
+                Box {
+                    AsyncImage(
+                        model = it.toUri(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(18.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .fillMaxWidth()
+                            .sharedElement(
+                                rememberSharedContentState("image/${noteId}"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            ),
+                        contentScale = ContentScale.FillWidth
+                    )
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                    ) {
+                        IconButton(
+                            onClick = onImageDelete
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                "delete image",
+                                tint = Color.Red
+                            )
+                        }
+                        IconButton(
+                            onClick = onImageChange
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                "edit image",
+                                tint = Color.Red
+                            )
+                        }
+                    }
+                }
             }
 
 
 
             TextField(
-                value = title ?: "",
-                onValueChange = onTitleChange,
+                value = state.title,
+                onValueChange = viewModel::onTitleChange,
                 textStyle = MaterialTheme.typography.titleLarge,
                 placeholder = {
                     Text(
@@ -253,7 +274,7 @@ fun DetailedNote(
                 modifier = Modifier
                     .fillMaxWidth()
                     .sharedElement(
-                        rememberSharedContentState("title"),
+                        rememberSharedContentState("title/${noteId}"),
                         animatedVisibilityScope = animatedVisibilityScope
                     ),
                 colors = TextFieldDefaults.colors(
@@ -263,11 +284,12 @@ fun DetailedNote(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent
-                )
+                ),
+                isError = state.validationState.isTitleTooLong
             )
             TextField(
-                value = body ?: "",
-                onValueChange = onBodyChange,
+                value = state.body,
+                onValueChange = viewModel::onBodyChange,
                 textStyle = MaterialTheme.typography.bodyLarge,
                 placeholder = {
                     Text(
@@ -278,7 +300,7 @@ fun DetailedNote(
                 modifier = Modifier
                     .fillMaxWidth()
                     .sharedElement(
-                        rememberSharedContentState("body"),
+                        rememberSharedContentState("body/${noteId}"),
                         animatedVisibilityScope = animatedVisibilityScope
                     ),
                 colors = TextFieldDefaults.colors(

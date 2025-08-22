@@ -19,7 +19,8 @@ import org.ghost.notes.enums.SortOrder
 @Dao
 interface NotesDao {
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT notes.* FROM notes
         LEFT JOIN note_tags ON notes.id = note_tags.note_id
         WHERE
@@ -49,7 +50,8 @@ interface NotesDao {
                     ELSE notes.id
                 END
             END DESC
-    """)
+    """
+    )
     fun filterNotes(
         query: String?,
         tagId: Int?,
@@ -63,10 +65,10 @@ interface NotesDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: Note): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTag(tag: Tag): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTags(tag: List<Tag>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -87,8 +89,6 @@ interface NotesDao {
 
     @Delete
     suspend fun deleteNote(note: Note)
-
-
 
 
 }

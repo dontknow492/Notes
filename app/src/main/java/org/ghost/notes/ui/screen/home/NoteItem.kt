@@ -1,5 +1,7 @@
-package org.ghost.notes.ui.screen
+package org.ghost.notes.ui.screen.home
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -24,17 +26,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import org.ghost.notes.entity.Note
+import org.ghost.notes.helper.formatEpochMilliToAgo
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun NoteItemCard(
@@ -58,15 +65,17 @@ fun NoteItemCard(
             with(sharedTransitionScope) {
                 note.image?.let { path ->
                     AsyncImage(
-                        model = path,
+                        model = path.toUri(),
                         contentDescription = null,
                         modifier = Modifier
-                            .weight(1f)
+                            .width(100.dp)
                             .height(64.dp)
                             .sharedElement(
-                                rememberSharedContentState("image"),
+                                rememberSharedContentState("image/${note.id}"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
+                            .clip(MaterialTheme.shapes.small),
+                        contentScale = ContentScale.FillWidth
                     )
                 }
 
@@ -79,7 +88,7 @@ fun NoteItemCard(
                     Text(
                         text = note.heading,
                         modifier = Modifier.sharedElement(
-                            rememberSharedContentState("heading"),
+                            rememberSharedContentState("heading/${note.id}"),
                             animatedVisibilityScope = animatedVisibilityScope
                         ),
                         style = MaterialTheme.typography.titleMedium,
@@ -92,7 +101,7 @@ fun NoteItemCard(
                             it,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.sharedElement(
-                                rememberSharedContentState(if (it == note.title) "title" else "body"),
+                                rememberSharedContentState(if (it == note.title) "title/${note.id}" else "body/${note.id}"),
                                 animatedVisibilityScope = animatedVisibilityScope
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -103,12 +112,13 @@ fun NoteItemCard(
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    text = "10 min\nago",
+                    text = formatEpochMilliToAgo(note.updatedAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     minLines = 2,
                     maxLines = 2,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
                 )
 
                 IconButton(
@@ -140,7 +150,7 @@ fun NoteItemWideCard(
     if (sharedTransitionScope != null) {
         with(sharedTransitionScope) {
             headingModifier.sharedElement(
-                rememberSharedContentState("heading"),
+                rememberSharedContentState("heading/${note.id}"),
                 animatedVisibilityScope = animatedVisibilityScope!!
             )
         }

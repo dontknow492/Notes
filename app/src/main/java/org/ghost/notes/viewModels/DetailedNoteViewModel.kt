@@ -1,5 +1,6 @@
 package org.ghost.notes.viewModels
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,8 +24,9 @@ class DetailedNoteViewModel @Inject constructor(
     private val notesRepository: NotesRepository
 ) : ViewModel() {
 
+
     // Get the noteId, defaulting to -1 if it's not passed (our "create mode" signal)
-    private val noteId: Int = savedStateHandle.get<Int>("noteId") ?: -1
+    private var noteId: Int = savedStateHandle.get<Int>("noteId") ?: -1
 
     private val _uiState = MutableStateFlow(DetailedNoteUiState())
     val uiState: StateFlow<DetailedNoteUiState> = _uiState.asStateFlow()
@@ -48,7 +50,8 @@ class DetailedNoteViewModel @Inject constructor(
                                 isPinned = noteWithTags.note.isPinned,
                                 themeId = noteWithTags.note.themeId,
                                 tags = noteWithTags.tags,
-                                date = noteWithTags.note.createdAt,
+                                createdAt = noteWithTags.note.createdAt,
+                                updatedAt = noteWithTags.note.updatedAt,
                                 // ...copy other fields...
                                 isLoading = false,
                                 isEditing = false // Start in view mode
@@ -72,10 +75,42 @@ class DetailedNoteViewModel @Inject constructor(
     // ... onTitleChange, onContentChange, etc. are the same ...
 
     fun saveNote() {
-        onEditModeChanged(false)
         viewModelScope.launch {
 
             val currentState = _uiState.value
+
+            Log.d("DetailedNoteViewModel", "save request: $currentState")
+
+            if (currentState.heading.isEmpty()) {
+                updateState(
+                    currentState.copy(
+                        validationState = currentState.validationState.copy(
+                            isHeadingEmpty = true
+                        )
+                    )
+                )
+                return@launch
+            }
+            if (currentState.heading.length > 100) {
+                updateState(
+                    currentState.copy(
+                        validationState = currentState.validationState.copy(
+                            isHeadingTooLong = true
+                        )
+                    )
+                )
+                return@launch
+            }
+            if (currentState.title.length > 100) {
+                updateState(
+                    currentState.copy(
+                        validationState = currentState.validationState.copy(
+                            isTitleTooLong = true
+                        )
+                    )
+                )
+                return@launch
+            }
 
             if (noteId != -1) {
                 // --- UPDATE EXISTING NOTE ---
@@ -91,10 +126,25 @@ class DetailedNoteViewModel @Inject constructor(
                     themeId = currentState.themeId
                     // ...copy other updated fields...
                 )
-                notesRepository.updateNoteWithTags(updatedNote, currentState.tags)
+                try {
+                    notesRepository.updateNoteWithTags(updatedNote, currentState.tags)
+                } catch (e: Exception) {
+                    Log.d("DetailedNoteViewModel", "Error updating note with tags: $e")
+                    updateState(
+                        currentState.copy(
+                            isLoading = false,
+                            error = e.message,
+                            generalError = e.message
+                        )
+                    )
+                    return@launch
+                }
+
+                Log.d("DetailedNoteViewModel", "Note updated successfully: ${updatedNote.id}")
 
             } else {
                 // --- INSERT NEW NOTE With TAGS ---
+
                 val newNote = Note(
                     heading = currentState.heading,
                     title = currentState.title,
@@ -108,19 +158,57 @@ class DetailedNoteViewModel @Inject constructor(
                     // ...set other fields from uiState...
                 )
                 val tags = currentState.tags
-                notesRepository.insertNoteWithTags(newNote, tags)
+                try {
+                    noteId = notesRepository.insertNoteWithTags(newNote, tags).toInt()
+                } catch (e: Exception) {
+                    Log.d("DetailedNoteViewModel", "Error inserting note with tags: $e")
+                    updateState(
+                        currentState.copy(
+                            isLoading = false,
+                            error = e.message,
+                            generalError = e.message
+                        )
+                    )
+                    return@launch
+                }
+                Log.d("DetailedNoteViewModel", "Note created successfully: $noteId")
+
+                updateState(
+                    currentState.copy(
+                        originalNote = newNote.copy(id = noteId.toInt()),
+                        isEditing = false,
+                        isLoading = false,
+                    )
+                )
             }
+
+            onEditModeChanged(false)
+
+            Log.d("DetailedNoteViewModel", "saveNote: Done, isEditing: ${uiState.value.isEditing}")
 
             // Here you would typically navigate back after saving
         }
     }
 
+
     fun onEditModeChanged(newEditingMode: Boolean) {
-        updateState(uiState.value.copy(isEditing = newEditingMode))
+        _uiState.update {
+            uiState.value.copy(
+                isEditing = newEditingMode
+            )
+        }
     }
 
     fun onTitleChange(newTitle: String) {
-        updateState(uiState.value.copy(title = newTitle))
+        updateState(
+            uiState.value.copy(
+                title = newTitle,
+                validationState = uiState.value.validationState.copy(
+                    isTitleEmpty = false,
+                    isTitleTooLong = false
+                )
+            )
+        )
     }
 
     fun onBodyChange(newBody: String) {
@@ -128,7 +216,15 @@ class DetailedNoteViewModel @Inject constructor(
     }
 
     fun onHeadingChange(newHeading: String) {
-        updateState(uiState.value.copy(heading = newHeading))
+        updateState(
+            uiState.value.copy(
+                heading = newHeading,
+                validationState = uiState.value.validationState.copy(
+                    isHeadingEmpty = false,
+                    isHeadingTooLong = false
+                )
+            )
+        )
     }
 
     fun onImageChange(newImage: String?) {
@@ -149,6 +245,18 @@ class DetailedNoteViewModel @Inject constructor(
 
     fun onTagsChange(newTags: List<Tag>) {
         updateState(uiState.value.copy(tags = newTags))
+    }
+
+    fun addTag(newTag: Tag) {
+        val newTags = uiState.value.tags.toMutableList()
+        newTags.add(newTag)
+        onTagsChange(newTags)
+    }
+
+    fun addTag(newTag: String) {
+        val newTags = uiState.value.tags.toMutableList()
+        newTags.add(Tag(name = newTag))
+        onTagsChange(newTags)
     }
 
     private fun updateState(newState: DetailedNoteUiState) {
