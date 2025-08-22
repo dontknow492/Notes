@@ -29,10 +29,10 @@ This project leverages a cutting-edge, all-Kotlin tech stack to deliver a robust
 
 ## **📸 Screenshots**
 
-|                     Light Theme                     |                           Dark Theme                           |
-|:---------------------------------------------------:|:--------------------------------------------------------------:|
-| ![App Home Screen Light Theme](preview/preview.png) |    ![App Home Screen Dark Theme](preview/preview_dark.png)     |
-| ![App Edit Screen Light Theme](preview/preview.png) | ![App Edit Screen Dark Theme](preview/preview_detail_dark.png) |
+|                        Light Theme                         |                           Dark Theme                           |
+|:----------------------------------------------------------:|:--------------------------------------------------------------:|
+|    ![App Home Screen Light Theme](preview/preview.png)     |    ![App Home Screen Dark Theme](preview/preview_dark.png)     |
+| ![App Edit Screen Light Theme](preview/preview_detail.png) | ![App Edit Screen Dark Theme](preview/preview_detail_dark.png) |
 
 ## **🚀 Setup and Installation**
 
